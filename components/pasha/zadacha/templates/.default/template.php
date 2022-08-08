@@ -5,9 +5,7 @@ use Bitrix\Main\Grid\Options as GridOptions;
 use Bitrix\Main\UI\PageNavigation;
 
 CModule::IncludeModule("iblock");
-
 $iListId = 'Tablelist';
-
 $obGridOptions = new GridOptions($iListId);
 $sort = $obGridOptions->GetSorting(['sort' => ['DATE_CREATE' => 'DESC'], 'vars' => ['by' => 'by', 'order' => 'order']]);
 $arNavParams = $obGridOptions->GetNavParams();
@@ -26,7 +24,9 @@ $arFilter = [
     ['id' => 'ID', 'name' => 'Номер задачи',  'default' => true],
     ['id' => 'NAME', 'name' => 'Название', 'type'=>'text', 'default' => true],
     ['id' => 'PROPERTY_SROK', 'name' => 'Крайний срок', 'type'=>'text', 'default' => true],
-    ['id' => 'PROPERTY_STATUS_VALUE', 'name' => 'Статус', 'type'=>'list', 'default' => true],
+    ['id' => 'PROPERTY_STATUS_VALUE', 'name' => 'Статус', 'type'=>'list', 'items'=>['Новая'=>'Новая',
+        'Выполнена'=>'Выполнена', 'Завершена'=>'Завершена', 'Отменена'=>'Отменена', 'Отклонена'=>'Отклонена' ,
+        'Выполняется'=>'Выполняется',],'default' => true],
 ];
 ?>
 
@@ -46,14 +46,11 @@ $obFilterOption = new Bitrix\Main\UI\Filter\Options($iListId);
 $arFilterData = $obFilterOption->getFilter([]);
 
 foreach ($arFilterData as $k => $v) {
-    // Тут разбор массива $filterData из формата, в котором его формирует main.ui.filter в формат, который подойдет для вашей выборки.
-    // Обратите внимание на поле "FIND", скорее всего его вы и захотите засунуть в фильтр по NAME и еще паре полей
     $filterData['NAME'] = "%".$arFilterData['FIND']."%";
 }
 
 $arFilterData['IBLOCK_ID'] = 1;
 $arFilterData['ACTIVE'] = "Y";
-
 $arColumns = [];
 $arColumns[] = ['id' => 'ID', 'name' => 'Номер задачи', 'sort' => 'ID', 'default' => true];
 $arColumns[] = ['id' => 'NAME', 'name' => 'Название', 'sort' => 'NAME', 'default' => true];
@@ -62,12 +59,10 @@ $arColumns[] = ['id' => 'SROK', 'name' => 'Крайний срок', 'sort' => '
 $arColumns[] = ['id' => 'STATUS', 'name' => 'Статус', 'sort' => 'STATUS', 'default' => true];
 
 $obRes = \CIBlockElement::GetList($sort['sort'], $arFilterData, false, $arNavParams,
-    ["ID", "IBLOCK_ID", "NAME",  "PROPERTY_OPISANIE", "PROPERTY_SROK",
-        "PROPERTY_STATUS"]
+    ["ID", "IBLOCK_ID", "NAME",  "PROPERTY_OPISANIE", "PROPERTY_SROK", "PROPERTY_STATUS"]
 );
 $obNav->setRecordCount($obRes->selectedRowsCount());
 while($arRow = $obRes->GetNext()) {
-//    print_r($row);
     $arList[] = [
         'data' => [
             "ID" => $arRow['ID'],
@@ -118,29 +113,6 @@ $APPLICATION->IncludeComponent('bitrix:main.ui.grid', '', [
     'SHOW_TOTAL_COUNTER'        => true,
     'SHOW_PAGESIZE'             => true,
     'SHOW_ACTION_PANEL'         => true,
-    'ACTION_PANEL'              => [
-        'GROUPS' => [
-            'TYPE' => [
-                'ITEMS' => [
-
-                    [
-                        'ID'       => 'iblock_Add=Y',
-                        'TYPE'     => 'BUTTON',
-                        'TEXT'        => 'Добавить',
-                        'CLASS'        => 'icon edit',
-                        'ONCHANGE' => ''
-                    ],
-                    [
-                        'ID'       => 'delete',
-                        'TYPE'     => 'BUTTON',
-                        'TEXT'     => 'Удалить',
-                        'CLASS'    => 'icon remove',
-
-                    ],
-                ],
-            ]
-        ],
-    ],
     'ALLOW_COLUMNS_SORT'        => true,
     'ALLOW_COLUMNS_RESIZE'      => true,
     'ALLOW_HORIZONTAL_SCROLL'   => true,
@@ -148,49 +120,4 @@ $APPLICATION->IncludeComponent('bitrix:main.ui.grid', '', [
     'ALLOW_PIN_HEADER'          => true,
     'AJAX_OPTION_HISTORY'       => 'N'
 ]);
-//print_r($list);
 ?>
-
-<?php
-$this->addExternalCss("/local/css/bootstrap.min.css");
-$this->addExternalJS("/local/js/bootstrap.bundle.min.js");
-?>
-
-<!--<table class="table  table-striped table-bordered" >-->
-<!--    <thead>-->
-<!--    <tr>-->
-<!--        <th>Название</th>-->
-<!--        <th>Описание</th>-->
-<!--        <th>Крайний срок</th>-->
-<!--        <th>Статус</th>-->
-<!--    </tr>-->
-<!--    </thead>-->
-<!---->
-<!--    --><?// foreach ($arResult['TASKS'] as  $key=>$arTask): ?>
-<!--        <tr>-->
-<!--            <td>-->
-<!--                --><?//= $arTask['NAME']?>
-<!--            </td>-->
-<!--            <td>-->
-<!--                --><?//= $arTask['OPISANIE']?>
-<!--            </td>-->
-<!--            <td>-->
-<!--                --><?//= $arTask['SROK']?>
-<!--            </td>-->
-<!--            <td>-->
-<!--                --><?//= $arTask['STATUS']?>
-<!--            </td>-->
-<!--            --><?// if ($arResult['ROLE']['ACTIVE']=="KURATOR"):?>
-<!--                <td>-->
-<!--                    <a href="?ID=--><?//=$key?><!--"class="btn btn-danger" >Удалить-->
-<!--                </td>-->
-<!--            --><?// endif;?>
-<!--        </tr>-->
-<!--    --><?//endforeach; ?>
-<!--</table>-->
-<!---->
-<?// if ($arResult['ROLE']['ACTIVE']=="KURATOR"):?>
-<!--    <a href="?iblock_Add=Y"  class="btn btn-primary">добавить</a>-->
-<?// endif;?>
-<!---->
-<!--<a href="?iblock_status=Y" class="btn btn-primary">Изменить статус</a>-->
