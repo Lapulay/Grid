@@ -1,10 +1,18 @@
 <?php
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die();
+use \Bitrix\Iblock\PropertyEnumerationTable;
+use Bitrix\Main\Grid\Options as GridOptions;
+use Bitrix\Main\UI\PageNavigation;
 
 class CAddzadacha extends CBitrixComponent
 {
     public $arEventFields = [];
     public $componentPage = "";
+    public $arNavParams = [];
+    public $arFilterData;
+    public $obSort = [];
+    public $arFilter;
+    public $iListId;
 
     function displayTemplate()
     {
@@ -84,10 +92,8 @@ class CAddzadacha extends CBitrixComponent
     function editingStatus($statusID, $elementId)
     {
         CModule::IncludeModule('iblock');
-
         $sPropertyCode = "STATUS";
         $iPropertyValue = $statusID;
-
         CIBlockElement::SetPropertyValuesEx($elementId, false, array($sPropertyCode =>  $iPropertyValue));
         return null;
     }
@@ -116,6 +122,83 @@ class CAddzadacha extends CBitrixComponent
         return null;
     }
 
+
+    function tableBody()
+    {
+        $this->arFilterData['IBLOCK_ID'] = 1;
+        $this->arFilterData['ACTIVE'] = "Y";
+        $arColumns[] = [];
+        $arColumns[] = ['id' => 'ID', 'name' => 'Номер задачи', 'sort' => 'ID', 'default' => true];
+        $arColumns[] = ['id' => 'NAME', 'name' => 'Название', 'sort' => 'NAME', 'default' => true];
+        $arColumns[] = ['id' => 'OPISANIE', 'name' => 'Описание', 'sort' => 'OPISANIE', 'default' => true];
+        $arColumns[] = ['id' => 'SROK', 'name' => 'Крайний срок', 'sort' => 'SROK', 'default' => true];
+        $arColumns[] = ['id' => 'STATUS', 'name' => 'Статус', 'sort' => 'STATUS', 'default' => true];
+        $this->arResult['arColumns']= $arColumns;
+
+        $obRes = \CIBlockElement::GetList($this->obSort['sort'], $this->arFilterData, false, $this->arNavParams,
+            ["ID", "IBLOCK_ID", "NAME",  "PROPERTY_OPISANIE", "PROPERTY_SROK", "PROPERTY_STATUS"]
+        );
+        $this->arResult['obNav']->setRecordCount($obRes->selectedRowsCount());
+        while($arRow = $obRes->GetNext()) {
+            $this->arResult['arList'][] = [
+                'data' => [
+                    "ID" => $arRow['ID'],
+                    "NAME" => $arRow['NAME'],
+                    "OPISANIE" => $arRow['PROPERTY_OPISANIE_VALUE'],
+                    "SROK" => $arRow['PROPERTY_SROK_VALUE'],
+                    "STATUS" => $arRow['PROPERTY_STATUS_VALUE'],
+                ],
+                'actions' => [
+                     [
+                        'text'    => 'Изменить статус',
+                        'default' => true,
+                        'onclick' => 'document.location.href="?iblock_status=Y"'
+                    ],
+                    [
+                        'text'    => 'Удалить',
+                        'default' => true,
+                        'onclick' => 'if(confirm("Точно?")){document.location.href="?ID='.$arRow['ID'].'"}'
+                    ],
+                ]
+            ];
+        }
+    }
+
+    function tableFilter()
+    {
+        CModule::IncludeModule("iblock");
+        $this->arResult['iListId'] = 'Tablelist';
+        $obGridOptions = new GridOptions( $this->arResult['iListId']);
+        $this->obSort = $obGridOptions->GetSorting(['sort' => ['DATE_CREATE' => 'DESC'], 'vars' => ['by' => 'by', 'order' => 'order']]);
+        $this->arNavParams = $obGridOptions->GetNavParams();
+
+        $this->arResult['obNav'] = new PageNavigation( $this->arResult['iListId']);
+        $this->arResult['obNav']->allowAllRecords(true)
+            ->setPageSize($this->arNavParams['nPageSize'])
+            ->initFromUri();
+        if ( $this->arResult['obNav']->allRecordsShown()) {
+            $this->arNavParams = false;
+        } else {
+            $this->arNavParams['iNumPage'] = $this->arResult['obNav']->getCurrentPage();
+        }
+
+        $this->arFilter['IBLOCK_ID'] = 1;
+        $this->arResult['arFilter'] = [
+            ['id' => 'ID', 'name' => 'Номер задачи',  'default' => true],
+            ['id' => 'NAME', 'name' => 'Название', 'type'=>'text', 'default' => true],
+            ['id' => 'PROPERTY_SROK', 'name' => 'Крайний срок', 'type'=>'text', 'default' => true],
+            ['id' => 'PROPERTY_STATUS_VALUE', 'name' => 'Статус', 'type'=>'list', 'items'=>['Новая'=>'Новая',
+                'Выполнена'=>'Выполнена', 'Завершена'=>'Завершена', 'Отменена'=>'Отменена', 'Отклонена'=>'Отклонена' ,
+                'Выполняется'=>'Выполняется',],'default' => true],
+        ];
+
+        $obFilterOption = new Bitrix\Main\UI\Filter\Options($this->arResult['iListId']);
+        $this->arFilterData = $obFilterOption->getFilter([]);
+        foreach ($this->arFilterData as $k => $v) {
+            $filterData['NAME'] = "%".$this->arFilterData['FIND']."%";
+        }
+    }
+
     function makeRequests()
     {
         $componentPage;
@@ -123,7 +206,6 @@ class CAddzadacha extends CBitrixComponent
         if (!empty($_REQUEST["iblock_Add"])) {
             $this->componentPage = "template_test";
         }
-
         if (isset($_REQUEST['ID'])) {
             $this->deleteElement($_REQUEST['ID']);
         }
@@ -144,6 +226,8 @@ class CAddzadacha extends CBitrixComponent
     function executeComponent()
     {
         $this->arResult['LIST_VALUES'] =  $this->displayTemplate();
+        $this->tableFilter();
+        $this->tableBody();
         $this->accessUser();
         $this->displayTemplate();
         $this->makeRequests();
